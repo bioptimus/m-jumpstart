@@ -17,7 +17,8 @@ M-Optimus is a multimodal foundation model for histology developed by [Bioptimus
 
 - An AWS account with an active subscription to the M-Optimus model package on AWS Marketplace
 - An IAM role with **AmazonSageMakerFullAccess** (and Marketplace subscribe permissions if not yet subscribed)
-- A SageMaker Notebook Instance or SageMaker Studio environment
+- A SageMaker Notebook Instance, SageMaker Studio, or EC2 instance with Jupyter
+- A SageMaker execution role ARN (when running outside SageMaker, `get_execution_role()` will not work — hardcode the role ARN in the session setup cell)
 
 ## Input data format
 
@@ -34,9 +35,9 @@ Input data is expected to already be in the JSON format accepted by the API — 
 
 | File | Model | Description |
 |------|-------|-------------|
-| `m_embed_inputs.jsonl` | `m-optimus-stx` | 20 records with `mode: "embedding"`. No `bulk_rna` required. |
-| `m_predict_inputs.jsonl` | `m-optimus-stx` | 20 records with `mode: "prediction"` and a `bulk_rna` vector (19 374 floats). |
-| `tissue_seg_inputs.jsonl` | `tissue-seg` | 20 records with 512×512 tiles, `resolution: 8.0`, `mode: "prediction"`. |
+| `m_embed_input.json` | `m-optimus-stx` | Single record with `mode: "embedding"`. No `bulk_rna` required. |
+| `m_predict_input.json` | `m-optimus-stx` | Single record with `mode: "prediction"` and a `bulk_rna` vector (19 374 floats). |
+| `tissue_seg_input.json` | `tissue-seg` | Single record with a 512×512 tile, `resolution: 8.0`, `mode: "prediction"`. |
 
 ### JSON record fields
 
