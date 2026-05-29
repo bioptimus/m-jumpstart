@@ -28,15 +28,15 @@ Input data is expected to already be in the JSON format accepted by the API — 
 
 | File | Mode | Description |
 |------|------|-------------|
-| `m_embed_inputs.jsonl` | `embedding` | One JSON record per line; each record has `model_name: "m-optimus-stx"` and `mode: "embedding"`. No `bulk_rna` required. |
-| `m_predict_inputs.jsonl` | `prediction` | One JSON record per line; each record has `model_name: "m-optimus-stx"`, `mode: "prediction"`, and a `bulk_rna` vector (19 374 floats). |
+| `m_embed_inputs.jsonl` | `embedding` | One JSON record per line; each record has `model_name: "m-optimus"` and `mode: "embedding"`. No `bulk_rna` required. |
+| `m_predict_inputs.jsonl` | `prediction` | One JSON record per line; each record has `model_name: "m-optimus"`, `mode: "prediction"`, and a `bulk_rna` vector (19 374 floats). |
 
 ### Real-time inputs (`data/input/real-time/`)
 
 | File | Model | Description |
 |------|-------|-------------|
-| `m_embed_input.json` | `m-optimus-stx` | Single record with `mode: "embedding"`. No `bulk_rna` required. |
-| `m_predict_input.json` | `m-optimus-stx` | Single record with `mode: "prediction"` and a `bulk_rna` vector (19 374 floats). |
+| `m_embed_input.json` | `m-optimus` | Single record with `mode: "embedding"`. No `bulk_rna` required. |
+| `m_predict_input.json` | `m-optimus` | Single record with `mode: "prediction"` and a `bulk_rna` vector (19 374 floats). |
 | `tissue_seg_input.json` | `tissue-seg` | Single record with a 512×512 tile, `resolution: 8.0`, `mode: "prediction"`. |
 
 ### JSON record fields
@@ -51,7 +51,7 @@ Input data is expected to already be in the JSON format accepted by the API — 
 | `tissue_ratio` | float | Fraction of the tile covered by tissue |
 | `patch_idx` | int | Index of this tile within the slide |
 | `resolution` | float | Extraction resolution in µm/px (0.5 for M-Optimus, 8.0 for tissue segmentation) |
-| `model_name` | string | Server-side dispatch key (`"m-optimus-stx"` or `"tissue-seg"`) |
+| `model_name` | string | Server-side dispatch key (`"m-optimus"` or `"tissue-seg"`) |
 | `mode` | string | `"embedding"` or `"prediction"` |
 
 ## Expected outputs
