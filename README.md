@@ -1,85 +1,66 @@
-# M-Optimus — AWS Marketplace SageMaker Jumpstart
+# M-Optimus — Spatial Transcriptomics from Histology
 
-This repository contains a sample notebook for deploying **M-Optimus** from AWS Marketplace using Amazon SageMaker.
+**Predict spatial gene expression directly from H&E slides — optionally refined with bulk RNA-seq.**
 
-M-Optimus is a multimodal foundation model for histology developed by [Bioptimus](https://www.bioptimus.com). It integrates whole slide histology images with bulk RNA-seq data to produce rich multimodal representations. The package also includes a dedicated tissue segmentation model.
+[M-Optimus](https://docs.bioptimus.com/documentation/models/m-optimus) is a multimodal foundation model for histology developed by [Bioptimus](https://www.bioptimus.com). Its headline capability is predicting **spatial gene expression** directly from a routine H&E tile, recovering an expensive molecular readout from a low-cost slide. The package also includes a dedicated tissue segmentation model.
 
-## Notebook
+| Capability | Output |
+|---|---|
+| **Tile embeddings** | 1536-dimensional feature vector (same as [H-Optimus-1](https://docs.bioptimus.com/documentation/models/h-optimus)) |
+| **Spatial gene expression** | Predicted expression for 6,002 genes per tile (Ensembl IDs) |
+| **Multimodal refinement** | Optional bulk RNA input improves predictions ~4% |
 
-**[`M-optimus.ipynb`](M-optimus.ipynb)** — end-to-end walkthrough covering:
+## Getting started
 
-1. Subscribing to the model package on AWS Marketplace
-2. Real-time inference (embedding mode, prediction mode, tissue segmentation)
-3. Batch inference (embedding and prediction transform jobs)
-4. Clean-up
+The tutorial notebook **[`M-Optimus.ipynb`](M-Optimus.ipynb)** is an end-to-end, runnable walkthrough: it downloads a demo TCGA-LUAD slide, generates tissue masks, extracts embeddings, predicts spatial gene expression (image-only and refined with bulk RNA), and visualizes the results.
 
-## Pre-requisites
+1. Install the SDK: `pip install "bioptimus-sdk[torch]"` (the `[torch]` extra is only needed for the `local` backend).
+2. Open `M-Optimus.ipynb`.
+3. In **Section 2 (Configuration)**, choose your deployment backend (see below).
+4. Run the cells top to bottom.
 
-- An AWS account with an active subscription to the M-Optimus model package on AWS Marketplace
-- An IAM role with **AmazonSageMakerFullAccess** (and Marketplace subscribe permissions if not yet subscribed)
-- A SageMaker Notebook Instance, SageMaker Studio, or EC2 instance with Jupyter
-- A SageMaker execution role ARN (when running outside SageMaker, `get_execution_role()` will not work — hardcode the role ARN in the session setup cell)
+## Choosing a deployment option
 
-## Input data format
+The notebook runs the same pipeline against any of three backends, selected via the `Backend` enum. Pick **one** and configure it in both the **Configuration** cell (Section 2) and the **`Inference(...)`** call (Section 4) — only one backend block may be active at a time.
 
-Input data is expected to already be in the JSON format accepted by the API — no additional conversion is required.
+| Backend | When to use | Key parameters |
+|---|---|---|
+| **`remote`** (`Backend.REMOTE`) | You have a running Bioptimus FastAPI server (Docker or bare-metal) | `api_url` |
+| **`aws`** (`Backend.AWS`) | You have a deployed SageMaker endpoint | `endpoint_name`, `region_name` |
+| **`local`** (`Backend.LOCAL`) | You have a CUDA GPU plus the `.pt2` checkpoints and assets CSV (no server) | `checkpoints`, `device`, `assets_root` |
 
-### Batch inputs (`data/input/batch/`)
+> **Not sure which to pick?** Given a **server URL** → `remote`. Deployed on **AWS SageMaker** → `aws`. Have a **GPU machine plus the model files** → `local` (the notebook's default).
 
-| File | Mode | Description |
-|------|------|-------------|
-| `m_embed_inputs.jsonl` | `embedding` | One JSON record per line; each record has `model_name: "m-optimus"` and `mode: "embedding"`. No `bulk_rna` required. |
-| `m_predict_inputs.jsonl` | `prediction` | One JSON record per line; each record has `model_name: "m-optimus"`, `mode: "prediction"`, and a `bulk_rna` vector (19 374 floats). |
+### Backend-specific setup
 
-### Real-time inputs (`data/input/real-time/`)
+- **`remote`** — Set `API_URL` (e.g. `http://0.0.0.0:8080`); `utils.check_server(API_URL)` verifies connectivity.
+- **`aws`** — Set `ENDPOINT_NAME` and `REGION_NAME`. Requires an AWS account with an active Marketplace subscription to M-Optimus, an IAM role with **AmazonSageMakerFullAccess**, and a SageMaker execution role ARN. Tissue segmentation is bundled on the same endpoint at no extra cost.
+- **`local`** — Requires a CUDA GPU compatible with the exported `.pt2` models (default `sm_86` — A10G, RTX 3090) and three paths, all provided by Bioptimus:
+  - `M_OPTIMUS_CHECKPOINT` — the M-Optimus `.pt2` checkpoint
+  - `TISSUE_SEG_CHECKPOINT` — the tissue-segmentation `.pt2` checkpoint
+  - `ASSETS_ROOT` — the M-Optimus **assets CSV** listing the input/output genes the model expects (used to align gene columns)
 
-| File | Model | Description |
-|------|-------|-------------|
-| `m_embed_input.json` | `m-optimus` | Single record with `mode: "embedding"`. No `bulk_rna` required. |
-| `m_predict_input.json` | `m-optimus` | Single record with `mode: "prediction"` and a `bulk_rna` vector (19 374 floats). |
-| `tissue_seg_input.json` | `tissue-seg` | Single record with a 512×512 tile, `resolution: 8.0`, `mode: "prediction"`. |
+  The `checkpoints` dict keys (`"m-optimus"`, `"tissue-seg"`) are fixed identifiers — do not rename them.
 
-### JSON record fields
+## Prerequisites
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `image_data` | string | Base64-encoded PNG tile |
-| `bulk_rna` | list\[float\] \| null | Bulk RNA-seq expression vector (required for prediction mode, `null` for embedding) |
-| `slide_name` | string | Identifier for the source slide |
-| `x`, `y` | int | Top-left coordinates of the tile in pixels |
-| `width`, `height` | int | Tile dimensions in pixels (224×224 for M-Optimus, 512×512 for tissue segmentation) |
-| `tissue_ratio` | float | Fraction of the tile covered by tissue |
-| `patch_idx` | int | Index of this tile within the slide |
-| `resolution` | float | Extraction resolution in µm/px (0.5 for M-Optimus, 8.0 for tissue segmentation) |
-| `model_name` | string | Server-side dispatch key (`"m-optimus"` or `"tissue-seg"`) |
-| `mode` | string | `"embedding"` or `"prediction"` |
+| Requirement | Details |
+|---|---|
+| **Python** | 3.12+ |
+| **SDK** | `bioptimus-sdk` (`[torch]` extra for the `local` backend) |
+| **Backend** | One of `remote`, `aws`, or `local` (see above) |
+| **Disk space** | ~2 GB slide + ~500 MB outputs for the demo |
 
-## Expected outputs
+The notebook downloads its demo data automatically. To use your own slides, drop whole-slide images (`.svs`, `.tiff`, `.ndpi`, and others) into the WSI directory; bulk RNA-seq is optional and late-bound from a TSV/CSV of **TPM-normalized** values keyed by Ensembl gene ID.
 
-| Mode | Output dimension | Description |
-|------|-----------------|-------------|
-| Embedding | 1 536 | Tile feature vector |
-| Prediction | 6 002 | Multimodal prediction output |
-| Tissue segmentation | 262 144 (512 × 512) | Flattened binary tissue mask |
+## Documentation
 
-## Naming conventions
-
-| SageMaker resource | Name |
-|-------------------|------|
-| Endpoint | `m-optimus` |
-| Batch model | `m-optimus` |
-| Embedding transform job | `m-optimus-embed-<timestamp>` |
-| Prediction transform job | `m-optimus-predict-<timestamp>` |
-
-## Dependencies
-
-```
-sagemaker==2.254.1
-boto3==1.42.2
-```
-
-Install via the `%pip install` cells at the top of the notebook, or run:
-
-```bash
-pip install sagemaker==2.254.1 boto3==1.42.2
-```
+| Resource | URL |
+|---|---|
+| M-Optimus model page | https://docs.bioptimus.com/documentation/models/m-optimus |
+| Spatial transcriptomics guide | https://docs.bioptimus.com/guides/workflows/spatial-transcriptomics |
+| SDK overview | https://docs.bioptimus.com/guides/get-started/sdk |
+| Inference facade | https://docs.bioptimus.com/guides/get-started/inference-facade |
+| Cohorts guide | https://docs.bioptimus.com/guides/workflows/cohort |
+| Visualizing results | https://docs.bioptimus.com/guides/get-started/visualizing-results |
+| Choosing a model | https://docs.bioptimus.com/documentation/models/choosing-a-model |
