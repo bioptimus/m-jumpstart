@@ -7,7 +7,7 @@
 | Capability | Output |
 |---|---|
 | **Tile embeddings** | 1536-dimensional feature vector (same as [H-Optimus-1](https://docs.bioptimus.com/documentation/models/h-optimus)) |
-| **Spatial gene expression** | Predicted expression for 6,002 genes per tile (Ensembl IDs) |
+| **Spatial gene expression** | Predicted expression for ~6,000 genes per tile (Ensembl IDs) |
 | **Multimodal refinement** | Optional bulk RNA input improves predictions ~4% |
 
 ## Getting started
