@@ -19,6 +19,14 @@ The tutorial notebook **[`M-Optimus.ipynb`](M-Optimus.ipynb)** is an end-to-end,
 3. In **Section 2 (Configuration)**, choose your deployment backend (see below).
 4. Run the cells top to bottom.
 
+## Example notebooks
+
+Applied, end-to-end walkthroughs that build on the tutorial live under [`examples/`](examples/):
+
+| Notebook | What it shows |
+|---|---|
+| [`examples/msln-adc-stratification.ipynb`](examples/msln-adc-stratification.ipynb) | Uses spatial MSLN expression and a co-localized desmoplastic *stromal barrier* metric to stratify MSLN-high pancreatic cancer (TCGA-PAAD) patients for antibody-drug conjugate (ADC) therapy — revealing spatial context that bulk RNA-seq and IHC cannot. Runs against the `remote` backend (set `API_URL` for your M-Optimus server). |
+
 ## Choosing a deployment option
 
 The notebook runs the same pipeline against any of three backends, selected via the `Backend` enum. Pick **one** and configure it in both the **Configuration** cell (Section 2) and the **`Inference(...)`** call (Section 4) — only one backend block may be active at a time.
